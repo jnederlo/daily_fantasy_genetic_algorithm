@@ -1,6 +1,24 @@
-import csv, time, random
+# **************************************************************************** #
+#                                                                              #
+#                                                                  /           #
+#    Daily Fantasy Hockey Genetic Algorithm              ::       /::::::::    #
+#                                                       ::       /::           #
+#    By: Jarvis Nederlof <jnederlo@student.42.us.org>  ::       /::            #
+#    LINECRUNCHER (L/C)                               ::       /::             #
+#                                                    :::::::::/:::::::::       #
+#    https://github.com/jnederlo                             /                 #
+#                                                                              #
+# **************************************************************************** #
 
-class Genetic():
+import csv
+import time
+import random
+
+class GeneticNHL(object):
+	'''
+		Genetic Algorithm class for NHL daily fantasy on Draftkings.
+	'''
+
 	def __init__(self, num_lineups, duration=60):
 		self.num_lineups = num_lineups
 		self.duration = duration
@@ -11,13 +29,12 @@ class Genetic():
 		self.utils = []
 		self.lineups = []
 
-
 	def run(self):
 		'''
 			Run the program for a set duration of seconds. Longer run-time might produce higher
 			projected lineups, but shouldn't take more than about 60 seconds or so.
 		'''
-		
+
 		runtime = time.time() + self.duration
 		while time.time() < runtime:
 			self.get_lineups()
@@ -28,13 +45,13 @@ class Genetic():
 		'''
 			This is where all of the lineups are added to the 'lineups' class variable.
 			We create 10 lineups, rank them and take the top 3. We then mate the top 3 together
-			to create 3 more lineups. Finally, we create another 4 lineups, so we add 10 lineups 
+			to create 3 more lineups. Finally, we create another 4 lineups, so we add 10 lineups
 			to the class variable everytime get_lineups() runs.
 		'''
 
 		#generate 10 new lineups
-		new_lineups = [self.generate_lineup() for i in range(10)]
-		
+		new_lineups = [self.generate_lineup() for _ in range(10)]
+
 		#sort the lineups by their predicted score
 		new_lineups.sort(key=lambda x: x[-1], reverse=True)
 
@@ -64,15 +81,15 @@ class Genetic():
 
 		#Create lists of all available players for each position from the two lineups plus a random player
 		centers = [lineup1[0], lineup1[1], lineup2[0], lineup2[1],
-					self.centers[random.randint(0, len(self.centers) - 1)]]
+						self.centers[random.randint(0, len(self.centers) - 1)]]
 		wingers = [lineup1[2], lineup1[3], lineup1[4], lineup2[2], lineup2[3], lineup2[4],
-					self.wingers[random.randint(0, len(self.wingers) - 1)]]
+						self.wingers[random.randint(0, len(self.wingers) - 1)]]
 		defencemen = [lineup1[5], lineup1[6], lineup2[5], lineup2[6],
-					self.defencemen[random.randint(0, len(self.defencemen) - 1)]]
+						self.defencemen[random.randint(0, len(self.defencemen) - 1)]]
 		goalies = [lineup1[7], lineup2[7],
-					self.goalies[random.randint(0, len(self.goalies) - 1)]]
+						self.goalies[random.randint(0, len(self.goalies) - 1)]]
 		utils = [lineup1[8], lineup2[8],
-					self.utils[random.randint(0, len(self.utils) - 1)]]
+						self.utils[random.randint(0, len(self.utils) - 1)]]
 
 		#Randomly grab n players from each position to fill out the new mated lineup
 		def grab_players(position, n):
@@ -134,7 +151,7 @@ class Genetic():
 			Valid lineups remain under the $50,000 salary cap,
 			have a minimum of 3 teams, and 9 total players.
 		'''
-		
+
 		#calculate the total projection of the lineup based on player averages
 		projection = round(sum(player['avePoints'] for player in lineup), 2)
 		#calculate the total salary used for the lineup
@@ -161,13 +178,14 @@ class Genetic():
 		'''
 
 		with open("./DKSalaries.csv") as f:
-			r = csv.reader(f)
-			
+			reader = csv.reader(f)
+
 			#skip past the instructions and header in file
-			[next(r) for i in range(8)]
-			
+			for _ in range(8):
+				next(reader)
+
 			#grab the the player information for each player
-			for row in r:
+			for row in reader:
 				player = {}
 				player['name'] = row[11]
 				player['position'] = row[14][0]
@@ -186,7 +204,7 @@ class Genetic():
 						self.wingers.append(player)
 					elif player['position'] == 'D':
 						self.defencemen.append(player)
-					
+
 					#append the player to the utility position list if not a goalie
 					if player['position'] != 'G':
 						self.utils.append(player)
@@ -199,11 +217,12 @@ class Genetic():
 		'''
 
 		#trim the lineups to include only the player name + id, and the salary and projection
-		lineups = [[player['name'] if type(player) is dict else player for player in lineup] for lineup in self.lineups]
-		
+		lineups = [[player['name'] if isinstance(player) is dict else player for player in lineup]
+						for lineup in self.lineups]
+
 		#remove the duplicate lineups
 		lineups = [lineups[i] for i in range(self.num_lineups - 1) if lineups[i] != lineups[i+1]]
-		
+
 		#remove the salary and projection so can upload lineups to DraftKings
 		lineups_for_upload = [lineup[:9] for lineup in lineups]
 
@@ -211,19 +230,19 @@ class Genetic():
 		header_for_upload = ['C', 'C', 'W', 'W', 'W', 'D', 'D', 'G', 'UTIL']
 
 		with open("./lineups.csv", 'w') as f:
-			w = csv.writer(f)
-			w.writerow(header)
-			w.writerows(lineups)
-		
+			writer = csv.writer(f)
+			writer.writerow(header)
+			writer.writerows(lineups)
+
 		with open("./lineups_for_upload.csv", 'w') as f:
-			w = csv.writer(f)
-			w.writerow(header_for_upload)
-			w.writerows(lineups_for_upload)
+			writer = csv.writer(f)
+			writer.writerow(header_for_upload)
+			writer.writerows(lineups_for_upload)
 
 if __name__ == "__main__":
 	#specify the number of lineups to generate, and how long to let the program run for (optional)
 	#the default duration is 60 seconds
-	g = Genetic(num_lineups=100)
+	g = GeneticNHL(num_lineups=100)
 	g.load_roster()
 	g.run()
 	g.save_file()
