@@ -110,14 +110,10 @@ class GeneticNHL(object):
 
 		#Check if the lineup is valid (i.e. it satisfies some basic constraints)
 		lineup = self.check_valid(lineup)
-		if lineup:
-			return lineup
-		else:
-			#if not valid return max of lineup1 or lineup2
-			if lineup1[-1] > lineup2[-1]:
-				return lineup1
-			else:
-				return lineup2
+		#If lineup isn't valid, run mate again
+		if not lineup:
+			lineup = self.mate_lineups(lineup1, lineup2)
+		return lineup
 
 	def generate_lineup(self):
 		'''
@@ -150,6 +146,7 @@ class GeneticNHL(object):
 		'''
 			Valid lineups remain under the $50,000 salary cap,
 			have a minimum of 3 teams, and 9 total players.
+			Every lineup already satisfires the positional constraints when created.
 		'''
 
 		#calculate the total projection of the lineup based on player averages
@@ -159,15 +156,15 @@ class GeneticNHL(object):
 		#get a list of the unique teams on the lineup
 		teams = set([player['teamAbbrev'] for player in lineup])
 		#remove duplicate players from lineup and count how many players
-		num_players = len(set(map(lambda x: x['name'], lineup)))
+		num_players = len(set(player['name'] for player in lineup))
+		# num_players = len(set(map(lambda x: x['name'], lineup)))
 
 		#check the salary cap, at least 3 teams, and at least 9 unique players
 		if salary < 50000 and len(teams) >= 3 and num_players == 9:
 			#add the salary and the projection to the lineup of players and return the lineup
 			lineup.extend((salary, projection))
 			return lineup
-		else:
-			return False
+		return False
 
 	def load_roster(self):
 		'''
@@ -216,8 +213,8 @@ class GeneticNHL(object):
 			The one without the salary and projection can be uploaded directly to DraftKings.
 		'''
 
-		#trim the lineups to include only the player name + id, and the salary and projection
-		lineups = [[player['name'] if isinstance(player) is dict else player for player in lineup]
+		#trim the lineups to include only the player name + id, salary and projection
+		lineups = [[player['name'] if isinstance(player, dict) else player for player in lineup]
 						for lineup in self.lineups]
 
 		#remove the duplicate lineups
@@ -241,7 +238,8 @@ class GeneticNHL(object):
 
 if __name__ == "__main__":
 	#specify the number of lineups to generate, and how long to let the program run for (optional)
-	#the default duration is 60 seconds
+	#the default duration is 60 seconds.
+	#I use runtime instead of # of mutations b/c I think it is more intuitive.
 	g = GeneticNHL(num_lineups=100)
 	g.load_roster()
 	g.run()
