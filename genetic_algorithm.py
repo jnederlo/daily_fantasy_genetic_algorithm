@@ -27,7 +27,7 @@ class GeneticNHL(object):
 		self.wingers = []
 		self.defencemen = []
 		self.utils = []
-		self.lineups = []
+		self.top_150 = []
 
 	def run(self):
 		'''
@@ -38,15 +38,15 @@ class GeneticNHL(object):
 		runtime = time.time() + self.duration
 		while time.time() < runtime:
 			self.get_lineups()
-			self.lineups.sort(key=lambda x: x[-1], reverse=True)
-			self.lineups = self.lineups[:self.num_lineups]
+			self.top_150.sort(key=lambda x: x[-1], reverse=True)
+			#We use 150 as the number here b/c drafkings only allows a maximum of 150 lineups in any one contest
+			self.top_150 = self.top_150[:150]
 
 	def get_lineups(self):
 		'''
-			This is where all of the lineups are added to the 'lineups' class variable.
-			We create 10 lineups, rank them and take the top 3. We then mate the top 3 together
-			to create 3 more lineups. Finally, we create another 4 lineups, so we add 10 lineups
-			to the class variable everytime get_lineups() runs.
+			This is where we create new lineups and add to top lineups (i.e. the 'lineups' class variable).
+			We create 10 lineups, rank them and mate the top 3 together,
+			then we take the offspring and mate with a randomly selected lineup from the top lineups.
 		'''
 
 		#generate 10 new lineups
@@ -55,21 +55,24 @@ class GeneticNHL(object):
 		#sort the lineups by their predicted score
 		new_lineups.sort(key=lambda x: x[-1], reverse=True)
 
-		#Take the top 3 lineups and add to the class variable 'lineups'
-		self.lineups.append(new_lineups[0])
-		self.lineups.append(new_lineups[1])
-		self.lineups.append(new_lineups[2])
+		#Add the newly created lineups to the top_150 (they will be sorted and bottom ones removed later)
+		self.top_150.extend(new_lineups)
 
-		#Mate the top 3 lineups together to add 3 new lineups to the class variable 'lineups'
-		self.lineups.append(self.mate_lineups(new_lineups[0], new_lineups[1]))
-		self.lineups.append(self.mate_lineups(new_lineups[0], new_lineups[2]))
-		self.lineups.append(self.mate_lineups(new_lineups[1], new_lineups[2]))
-
-		#generate 4 new lineups
-		self.lineups.append(self.generate_lineup())
-		self.lineups.append(self.generate_lineup())
-		self.lineups.append(self.generate_lineup())
-		self.lineups.append(self.generate_lineup())
+		#Mate the top 3 lineups together
+		offspring_1 = self.mate_lineups(new_lineups[0], new_lineups[1])
+		offspring_2 = self.mate_lineups(new_lineups[0], new_lineups[2])
+		offspring_3 = self.mate_lineups(new_lineups[1], new_lineups[2])
+		
+		#Mate the offspring with a randomly selected lineup from the top_150 and add to top_150
+		#Adding this step makes the algorithm more greedy, and produces higher projections, but can be skipped
+		self.top_150.append(self.mate_lineups(offspring_1, self.top_150[random.randint(0, len(self.top_150) - 1)]))
+		self.top_150.append(self.mate_lineups(offspring_2, self.top_150[random.randint(0, len(self.top_150) - 1)]))
+		self.top_150.append(self.mate_lineups(offspring_3, self.top_150[random.randint(0, len(self.top_150) - 1)]))
+		
+		#Add the original offspring to the top_150
+		self.top_150.append(offspring_1)
+		self.top_150.append(offspring_2)
+		self.top_150.append(offspring_3)
 
 	def mate_lineups(self, lineup1, lineup2):
 		'''
@@ -79,7 +82,7 @@ class GeneticNHL(object):
 			and returns the valid lineup.
 		'''
 
-		#Create lists of all available players for each position from the two lineups plus a random player
+		#Create lists of all available players for each position from the two lineups plus a random player or 2
 		centers = [lineup1[0], lineup1[1], lineup2[0], lineup2[1],
 						self.centers[random.randint(0, len(self.centers) - 1)]]
 		wingers = [lineup1[2], lineup1[3], lineup1[4], lineup2[2], lineup2[3], lineup2[4],
@@ -87,14 +90,16 @@ class GeneticNHL(object):
 		defencemen = [lineup1[5], lineup1[6], lineup2[5], lineup2[6],
 						self.defencemen[random.randint(0, len(self.defencemen) - 1)]]
 		goalies = [lineup1[7], lineup2[7],
+						self.goalies[random.randint(0, len(self.goalies) - 1)],
 						self.goalies[random.randint(0, len(self.goalies) - 1)]]
 		utils = [lineup1[8], lineup2[8],
+						self.utils[random.randint(0, len(self.utils) - 1)],
 						self.utils[random.randint(0, len(self.utils) - 1)]]
 
-		#Randomly grab n players from each position to fill out the new mated lineup
-		def grab_players(position, n):
+		#Randomly grab num players from each position to fill out the new mated lineup
+		def grab_players(position, num):
 			players = []
-			while len(players) < n:
+			while len(players) < num:
 				i = random.randint(0, len(position) - 1)
 				players.append(position[i])
 				del position[i]
@@ -215,7 +220,7 @@ class GeneticNHL(object):
 
 		#trim the lineups to include only the player name + id, salary and projection
 		lineups = [[player['name'] if isinstance(player, dict) else player for player in lineup]
-						for lineup in self.lineups]
+						for lineup in self.top_150]
 
 		#remove the duplicate lineups
 		lineups = [lineups[i] for i in range(self.num_lineups - 1) if lineups[i] != lineups[i+1]]
@@ -237,10 +242,10 @@ class GeneticNHL(object):
 			writer.writerows(lineups_for_upload)
 
 if __name__ == "__main__":
-	#specify the number of lineups to generate, and how long to let the program run for (optional)
+	#specify the number of lineups to generate (from 1 to 150), and how long to let the program run for (optional)
 	#the default duration is 60 seconds.
 	#I use runtime instead of # of mutations b/c I think it is more intuitive.
-	g = GeneticNHL(num_lineups=100)
+	g = GeneticNHL(num_lineups=10)
 	g.load_roster()
 	g.run()
 	g.save_file()
