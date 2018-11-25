@@ -13,6 +13,7 @@
 import csv
 import time
 import random
+import copy
 
 class GeneticNHL(object):
 	'''
@@ -97,28 +98,29 @@ class GeneticNHL(object):
 						self.utils[random.randint(0, len(self.utils) - 1)]]
 
 		#Randomly grab num players from each position to fill out the new mated lineup
-		def grab_players(position, num):
-			players = []
-			while len(players) < num:
-				i = random.randint(0, len(position) - 1)
-				players.append(position[i])
-				del position[i]
-			return players
+		def grab_players(players, num):
+			avail_players = copy.deepcopy(players)
+			selected_players = []
+			while len(selected_players) < num:
+				i = random.randint(0, len(avail_players) - 1)
+				selected_players.append(avail_players[i])
+				del avail_players[i]
+			return selected_players
 
-		#Create the new lineup by selecting players from each position list
-		lineup = []
-		lineup.extend(grab_players(centers, 2))
-		lineup.extend(grab_players(wingers, 3))
-		lineup.extend(grab_players(defencemen, 2))
-		lineup.extend(grab_players(goalies, 1))
-		lineup.extend(grab_players(utils, 1))
+		while True:
+			#Create the new lineup by selecting players from each position list
+			lineup = []
+			lineup.extend(grab_players(centers, 2))
+			lineup.extend(grab_players(wingers, 3))
+			lineup.extend(grab_players(defencemen, 2))
+			lineup.extend(grab_players(goalies, 1))
+			lineup.extend(grab_players(utils, 1))
 
-		#Check if the lineup is valid (i.e. it satisfies some basic constraints)
-		lineup = self.check_valid(lineup)
-		#If lineup isn't valid, run mate again
-		if not lineup:
-			lineup = self.mate_lineups(lineup1, lineup2)
-		return lineup
+			#Check if the lineup is valid (i.e. it satisfies some basic constraints)
+			lineup = self.check_valid(lineup)
+			#If lineup isn't valid, run mate again
+			if lineup:
+				return lineup
 
 	def generate_lineup(self):
 		'''
@@ -126,26 +128,23 @@ class GeneticNHL(object):
 			The lineup is then checked for validity and returned.
 		'''
 
-		#add the correct number of each position to a lineup
-		lineup = []
-		lineup.append(self.centers[random.randint(0, len(self.centers) - 1)])
-		lineup.append(self.centers[random.randint(0, len(self.centers) - 1)])
-		lineup.append(self.wingers[random.randint(0, len(self.wingers) - 1)])
-		lineup.append(self.wingers[random.randint(0, len(self.wingers) - 1)])
-		lineup.append(self.wingers[random.randint(0, len(self.wingers) - 1)])
-		lineup.append(self.defencemen[random.randint(0, len(self.defencemen) - 1)])
-		lineup.append(self.defencemen[random.randint(0, len(self.defencemen) - 1)])
-		lineup.append(self.goalies[random.randint(0, len(self.goalies) - 1)])
-		lineup.append(self.utils[random.randint(0, len(self.utils) - 1)])
+		while True:
+			#add the correct number of each position to a lineup
+			lineup = []
+			lineup.append(self.centers[random.randint(0, len(self.centers) - 1)])
+			lineup.append(self.centers[random.randint(0, len(self.centers) - 1)])
+			lineup.append(self.wingers[random.randint(0, len(self.wingers) - 1)])
+			lineup.append(self.wingers[random.randint(0, len(self.wingers) - 1)])
+			lineup.append(self.wingers[random.randint(0, len(self.wingers) - 1)])
+			lineup.append(self.defencemen[random.randint(0, len(self.defencemen) - 1)])
+			lineup.append(self.defencemen[random.randint(0, len(self.defencemen) - 1)])
+			lineup.append(self.goalies[random.randint(0, len(self.goalies) - 1)])
+			lineup.append(self.utils[random.randint(0, len(self.utils) - 1)])
 
-		#Check if the lineup is valid (i.e. it satisfies some basic constraints)
-		lineup = self.check_valid(lineup)
-		if lineup:
-			return lineup
-		else:
-			#generate a new lineup if not valid
-			lineup = self.generate_lineup()
-		return lineup
+			#Check if the lineup is valid (i.e. it satisfies some basic constraints)
+			lineup = self.check_valid(lineup)
+			if lineup:
+				return lineup
 
 	def check_valid(self, lineup):
 		'''
@@ -245,7 +244,7 @@ if __name__ == "__main__":
 	#specify the number of lineups to generate (from 1 to 150), and how long to let the program run for (optional)
 	#the default duration is 60 seconds.
 	#I use runtime instead of # of mutations b/c I think it is more intuitive.
-	g = GeneticNHL(num_lineups=10)
+	g = GeneticNHL(num_lineups=150)
 	g.load_roster()
 	g.run()
 	g.save_file()
