@@ -161,7 +161,6 @@ class GeneticNHL(object):
 		teams = set([player['teamAbbrev'] for player in lineup])
 		#remove duplicate players from lineup and count how many players
 		num_players = len(set(player['name'] for player in lineup))
-		# num_players = len(set(map(lambda x: x['name'], lineup)))
 
 		#check the salary cap, at least 3 teams, and at least 9 unique players
 		if salary < 50000 and len(teams) >= 3 and num_players == 9:
